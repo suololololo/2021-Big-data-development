@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+
+<head>
+    <script type="text/javascript" src="/js/jquery.min.js"></script>
+</head>
+<body>
+</body>
+<form name="fomr1">
+    <input type="text" name="db" value="操作数据库名称">
+    <input type="text" name="sql" size="30">
+    <input type="button" onclick="execute()" value="提交">
+</form>
+<!--<input type="submit" onclick="execute()">-->
+
+</html>
+<script>
+
+
+    window.onload = function getDatabase() {
+        $.ajax({
+            url: "/connect",
+            type: "GET",
+            data: {},
+            success: function (data) {
+                if (data.code == 1) {
+                    //window.location.href="/order_detail.htm?orderId="+data.data.id;
+                    renderDatabase(data);
+                } else {
+                    layer.msg(data.msg);
+                }
+            },
+            error: function () {
+                layer.msg("客户端请求有误");
+            }
+        });
+    };
+
+
+    function renderDatabase(res) {
+        var data = res.data;
+
+        var parent = document.body;
+        for (var i = 0; i < data.length; i++) {
+            var div = document.createElement("div");
+            var span = document.createElement("span");
+            var p = document.createElement("p");
+            div.setAttribute("id", i);
+            div.setAttribute("name", data[i].databaseName);
+            span.setAttribute("value", i);
+            span.setAttribute("name", data[i].databaseName);
+            p.innerHTML = data[i].databaseName;
+            span.appendChild(p);
+            div.appendChild(span);
+            parent.appendChild(div);
+            getTables(data[i].databaseName, i)
+        }
+    }
+
+    function render(res, index) {
+        var data = res.data;
+        var parent = document.getElementById(index);
+        var temp = document.getElementById(index).getAttribute("name");
+        for (var i = 0; i < data.length; i++) {
+            var span = document.createElement("span");
+            span.setAttribute("id", data[i].tableName);
+            span.setAttribute("name", temp);
+            var p = document.createElement("p");
+            p.setAttribute("style", "text-indent:2em");
+            p.innerHTML = data[i].tableName;
+            parent.appendChild(span);
+            span.appendChild(p);
+            span.onclick = function (ev) {
+                $.ajax({
+                    url: "/data/?databaseName=" + $(this).attr("name") + "&tableName=" + $(this).attr("id"),
+                    type: "GET",
+                    data: {},
+                    success: function (data) {
+                        if (data.code == 1) {
+                            //window.location.href="/order_detail.htm?orderId="+data.data.id;
+                            renderData(data);
+                        } else {
+                            layer.msg(data.msg);
+                        }
+                    },
+                    error: function () {
+                        layer.msg("客户端请求有误");
+                    }
+                });
+            }
+
+        }
+    };
+
+    function getTables(path, index) {
+        $.ajax({
+            url: "/tables/?databaseName=" + path,
+            type: "GET",
+            data: {},
+            success: function (data) {
+                if (data.code == 1) {
+                    render(data, index);
+                } else {
+                    layer.msg(data.msg);
+                }
+            },
+            error: function () {
+                layer.msg("客户端请求有误");
+            }
+        });
+    }
+
+    function renderData(res) {
+        if (res.code == -1) {
+            p = document.getElementById("error");
+            if (p != null) {
+                p.remove();
+            }
+            p = document.createElement("p");
+            p.setAttribute("id", "error");
+            p.innerHTML = "synatx error";
+            document.body.appendChild(p);
+            return;
+        }
+
+        var shuju = document.getElementById("shuju");
+        if (shuju != null) {
+            var childObj = shuju.childNodes;
+            for (var i = 0; i < childObj.length; i++) {
+                shuju.removeChild(childObj[i]);
+            }
+
+            shuju.remove();
+        }
+        shuju = document.createElement("table");
+        shuju.setAttribute("id", "shuju");
+        shuju.setAttribute("border", 1);
+        document.body.appendChild(shuju);
+        data = res.data;
+        var p = document.createElement("tr");
+        for (var i = 0; i < data.length; i++) {
+            var temp = document.createElement("tr");
+            for (var key in data[i]) {
+                if (i == 0) {
+                    var header = document.createElement("th");
+                    header.innerHTML = key;
+                    p.appendChild(header);
+
+                }
+                var header2 = document.createElement("td");
+                header2.innerHTML = data[i][key];
+                temp.appendChild(header2);
+            }
+            if (i == 0) {
+                shuju.appendChild(p);
+            }
+            shuju.appendChild(temp);
+        }
+    }
+
+
+    function execute() {
+
+        var databaseName = document.fomr1.db.value;
+        var sql = document.fomr1.sql.value;
+        $.ajax({
+            url: "/sql",
+            type: "POST",
+            data: {
+                "databaseName": databaseName,
+                "sql": sql
+            },
+            success: function (data) {
+
+                renderData(data);
+
+            },
+            error: function () {
+                layer.msg("客户端请求有误");
+            }
+        });
+    }
+</script>
